@@ -1,1 +1,0 @@
-Solution documentation will be explainer for critical parts of the exercises
