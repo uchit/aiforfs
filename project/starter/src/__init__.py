@@ -54,3 +54,6 @@ def create_vocareum_openai_client():
     print("📍 Base URL: https://openai.vocareum.com/v1")
     
     return client
+
+
+__all__ = ["create_vocareum_openai_client"]
