@@ -2,6 +2,7 @@
 """ReACT-style compliance narrative agent for SAR workflows."""
 
 import json
+import re
 from datetime import datetime
 from typing import Any, Dict
 
@@ -66,10 +67,17 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
             )
             response_content = response.choices[0].message.content
             json_content = self._extract_json_from_response(response_content)
-            result = ComplianceOfficerOutput.model_validate(json.loads(json_content))
-            validation = self._validate_narrative_compliance(result.narrative)
+            # Parse the model payload and default missing completeness flag to False.
+            parsed = json.loads(json_content)
+            if "completeness_check" not in parsed:
+                parsed["completeness_check"] = False
+            result = ComplianceOfficerOutput.model_validate(parsed)
+            # Pre-finalization validator enforces completeness and regulatory minimums.
+            validation = self._validate_narrative_compliance(result, case_data, risk_analysis)
             if not validation["is_compliant"]:
                 raise ValueError(validation["error"])
+            if result.completeness_check != validation["completeness_check"]:
+                result.completeness_check = validation["completeness_check"]
             execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
             self.logger.log_agent_action(
                 agent_type="ComplianceOfficer",
@@ -129,14 +137,87 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
             f"- Analyst Reasoning: {risk_analysis.reasoning}"
         )
 
-    def _validate_narrative_compliance(self, narrative: str) -> Dict[str, Any]:
-        """Validate that the narrative meets the word-count requirement."""
+    def _validate_narrative_compliance(
+        self,
+        result: ComplianceOfficerOutput,
+        case_data,
+        risk_analysis,
+    ) -> Dict[str, Any]:
+        """Pre-finalization validator for completeness and regulatory compliance."""
+        narrative = result.narrative or ""
         word_count = len(narrative.split())
         if word_count > 120:
             return {"is_compliant": False, "error": "Narrative exceeds 120 word limit"}
         if not narrative.strip():
             return {"is_compliant": False, "error": "Narrative cannot be empty"}
-        return {"is_compliant": True, "word_count": word_count}
+        if not result.narrative_reasoning or not result.narrative_reasoning.strip():
+            return {"is_compliant": False, "error": "Narrative reasoning cannot be empty"}
+
+        # Regulatory requirements define minimum narrative elements and citation anchors.
+        requirements = get_regulatory_requirements()
+        required_elements = requirements["required_elements"]
+
+        customer_id = getattr(case_data.customer, "customer_id", "")
+        customer_name = getattr(case_data.customer, "name", "")
+        has_customer_id = customer_id and customer_id in narrative
+        has_customer_name = customer_name and customer_name in narrative
+        has_customer_identifier = has_customer_id or has_customer_name
+
+        has_amount = bool(re.search(r"\$[\d,]+(?:\.\d{2})?", narrative))
+        temporal_terms = ["day", "days", "week", "month", "between", "during", "on", "over"]
+        has_temporal_reference = any(term in narrative.lower() for term in temporal_terms)
+        has_explicit_date = any(
+            getattr(txn, "transaction_date", "") in narrative for txn in case_data.transactions
+        )
+        has_date_or_time = has_temporal_reference or has_explicit_date
+
+        suspicious_terms = [
+            "suspicious",
+            "structur",
+            "threshold",
+            "avoid",
+            "evasion",
+            "launder",
+            "fraud",
+            "sanction",
+            "unusual",
+            "red flag",
+            "illicit",
+        ]
+        has_suspicious_rationale = any(term in narrative.lower() for term in suspicious_terms)
+
+        missing_elements = []
+        if not has_customer_identifier:
+            missing_elements.append(required_elements[0])
+        if not has_suspicious_rationale:
+            missing_elements.append(required_elements[1])
+        if not has_amount or not has_date_or_time:
+            missing_elements.append(required_elements[2])
+        if not has_suspicious_rationale:
+            missing_elements.append(required_elements[3])
+
+        # Citations must include at least one recognized regulatory anchor (e.g., CFR, FinCEN).
+        citations = result.regulatory_citations or []
+        has_min_citations = len(citations) >= 1
+        citation_text = " ".join(citations).lower()
+        has_regulatory_anchor = any(
+            token in citation_text for token in ["31 cfr", "usc", "fincen", "bsa", "sar"]
+        )
+        if not has_min_citations or not has_regulatory_anchor:
+            missing_elements.append("Regulatory citations")
+
+        is_compliant = len(missing_elements) == 0
+        return {
+            "is_compliant": is_compliant,
+            "completeness_check": is_compliant,
+            "word_count": word_count,
+            "missing_elements": missing_elements,
+            "error": (
+                "Narrative missing required elements: " + ", ".join(missing_elements)
+                if not is_compliant
+                else ""
+            ),
+        }
 
     def _format_transactions_for_compliance(self, transactions) -> str:
         lines = []
