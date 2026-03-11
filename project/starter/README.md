@@ -54,6 +54,7 @@ starter/
 
 ### Agent Layer
 - `RiskAnalystAgent` supports `Structuring`, `Sanctions`, `Fraud`, `Money_Laundering`, and `Other`
+- `RiskAnalystAgent` returns a safe fallback `RiskAnalystOutput` (no exception) if the LLM response is malformed, and logs the parsing error
 - `ComplianceOfficerAgent` enforces structured JSON, citations, and the 120-word narrative cap
 
 ### Workflow Integration
