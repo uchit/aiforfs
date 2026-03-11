@@ -30,7 +30,7 @@ try:
     FOUNDATION_AVAILABLE = True
 except ImportError:
     FOUNDATION_AVAILABLE = False
-    print("ℹ️ Foundation components not yet implemented. Test scenarios ready when you complete foundation_sar.py")
+    print(" Foundation components not yet implemented. Test scenarios ready when you complete foundation_sar.py")
 
 
 class RiskAnalystScenarios:
@@ -309,7 +309,7 @@ class RiskAnalystScenarios:
     def create_case_data(self, scenario_name: str) -> Optional['CaseData']:
         """Create CaseData object from scenario (requires foundation_sar.py to be implemented)"""
         if not FOUNDATION_AVAILABLE:
-            print("⚠️ Cannot create CaseData - foundation_sar.py not yet implemented")
+            print(" Cannot create CaseData - foundation_sar.py not yet implemented")
             return None
             
         scenario = self.scenarios[scenario_name]
@@ -386,20 +386,20 @@ class RiskAnalystScenarios:
         """Run all scenario tests against a Risk Analyst Agent"""
         results = {}
         
-        print("🧪 Running Risk Analyst Scenario Tests...")
+        print(" Running Risk Analyst Scenario Tests...")
         print("=" * 50)
         
         for scenario_name in self.scenarios.keys():
-            print(f"\n🔍 Testing: {self.scenarios[scenario_name]['name']}")
+            print(f"\n Testing: {self.scenarios[scenario_name]['name']}")
             result = self.run_scenario_test(agent, scenario_name)
             results[scenario_name] = result
             
             if "error" in result:
-                print(f"   ❌ ERROR: {result['error']}")
+                print(f"    ERROR: {result['error']}")
             elif result.get("overall_pass", False):
-                print(f"   ✅ PASS - Classification: {result['actual_classification']} (confidence: {result['confidence_score']:.2f})")
+                print(f"    PASS - Classification: {result['actual_classification']} (confidence: {result['confidence_score']:.2f})")
             else:
-                print(f"   ❌ FAIL - Expected: {result['expected_classification']}, Got: {result['actual_classification']}")
+                print(f"    FAIL - Expected: {result['expected_classification']}, Got: {result['actual_classification']}")
         
         # Calculate summary statistics
         total_tests = len(results)
@@ -414,7 +414,7 @@ class RiskAnalystScenarios:
             "detailed_results": results
         }
         
-        print(f"\n📊 SUMMARY: {passed_tests}/{total_tests} scenarios passed ({summary['pass_rate']:.1%})")
+        print(f"\n SUMMARY: {passed_tests}/{total_tests} scenarios passed ({summary['pass_rate']:.1%})")
         
         return summary
     
@@ -448,7 +448,7 @@ class ComplianceOfficerScenarios:
                 "risk_analysis": {
                     "classification": "Structuring",
                     "confidence_score": 0.85,
-                    "reasoning": "Multiple cash deposits just under $10,000 threshold over 3 consecutive days",
+                    "reasoning": "1) Context review: customer/account reviewed. 2) Pattern signals: multiple cash deposits just under $10,000 over 3 consecutive days. 3) Typology mapping: aligns with structuring. 4) Severity+confidence: High risk, 0.85 confidence. 5) Classification: Structuring.",
                     "key_indicators": ["threshold avoidance", "repeated amounts", "cash deposits", "multiple locations"],
                     "risk_level": "High"
                 },
@@ -463,7 +463,7 @@ class ComplianceOfficerScenarios:
                 "risk_analysis": {
                     "classification": "Money_Laundering",
                     "confidence_score": 0.90,
-                    "reasoning": "Large wire transfers to high-risk jurisdictions with complex layering pattern",
+                    "reasoning": "1) Context review: transaction history reviewed. 2) Pattern signals: large wire transfers to high-risk jurisdictions with complex layering pattern. 3) Typology mapping: aligns with money laundering. 4) Severity+confidence: Critical risk, 0.90 confidence. 5) Classification: Money_Laundering.",
                     "key_indicators": ["high-risk jurisdictions", "large amounts", "layered transactions", "shell companies"],
                     "risk_level": "Critical"
                 },
@@ -478,7 +478,7 @@ class ComplianceOfficerScenarios:
                 "risk_analysis": {
                     "classification": "Fraud",
                     "confidence_score": 0.78,
-                    "reasoning": "Elderly customer account showing uncharacteristic large online transfers",
+                    "reasoning": "1) Context review: customer profile reviewed. 2) Pattern signals: elderly account showing uncharacteristic large online transfers. 3) Typology mapping: aligns with fraud. 4) Severity+confidence: High risk, 0.78 confidence. 5) Classification: Fraud.",
                     "key_indicators": ["profile inconsistency", "elderly customer", "online activity", "large amounts"],
                     "risk_level": "High"
                 },
@@ -493,7 +493,7 @@ class ComplianceOfficerScenarios:
                 "risk_analysis": {
                     "classification": "Sanctions",
                     "confidence_score": 0.95,
-                    "reasoning": "Wire transfer to entity on OFAC sanctions list",
+                    "reasoning": "1) Context review: transaction and counterparty reviewed. 2) Pattern signals: wire transfer to entity on OFAC sanctions list. 3) Typology mapping: aligns with sanctions violation. 4) Severity+confidence: Critical risk, 0.95 confidence. 5) Classification: Sanctions.",
                     "key_indicators": ["sanctioned entity", "OFAC list", "prohibited transaction"],
                     "risk_level": "Critical"
                 },
@@ -508,7 +508,7 @@ class ComplianceOfficerScenarios:
     def create_risk_analysis_output(self, scenario_name: str) -> Optional['RiskAnalystOutput']:
         """Create RiskAnalystOutput from scenario data"""
         if not FOUNDATION_AVAILABLE:
-            print("⚠️ Cannot create RiskAnalystOutput - foundation_sar.py not yet implemented")
+            print(" Cannot create RiskAnalystOutput - foundation_sar.py not yet implemented")
             return None
             
         scenario = self.scenarios[scenario_name]
@@ -652,21 +652,21 @@ class ComplianceOfficerScenarios:
         """Run all compliance scenario tests"""
         results = {}
         
-        print("📝 Running Compliance Officer Scenario Tests...")
+        print(" Running Compliance Officer Scenario Tests...")
         print("=" * 50)
         
         for scenario_name in self.scenarios.keys():
-            print(f"\n✅ Testing: {self.scenarios[scenario_name]['name']}")
+            print(f"\n Testing: {self.scenarios[scenario_name]['name']}")
             result = self.run_scenario_test(agent, scenario_name)
             results[scenario_name] = result
             
             if "error" in result:
-                print(f"   ❌ ERROR: {result['error']}")
+                print(f"    ERROR: {result['error']}")
             elif result.get("overall_pass", False):
-                print(f"   ✅ PASS - Narrative: {result['word_count']} words")
+                print(f"    PASS - Narrative: {result['word_count']} words")
                 print(f"      Preview: {result['narrative'][:100]}...")
             else:
-                print(f"   ❌ FAIL - Validation issues detected")
+                print(f"    FAIL - Validation issues detected")
                 if result.get("validation"):
                     val = result["validation"]
                     print(f"      Word count: {val['word_count']}/{val['max_words']}")
@@ -685,7 +685,7 @@ class ComplianceOfficerScenarios:
             "detailed_results": results
         }
         
-        print(f"\n📊 SUMMARY: {passed_tests}/{total_tests} scenarios passed ({summary['pass_rate']:.1%})")
+        print(f"\n SUMMARY: {passed_tests}/{total_tests} scenarios passed ({summary['pass_rate']:.1%})")
         
         return summary
 
@@ -705,7 +705,7 @@ def run_quick_agent_test(risk_agent, compliance_agent=None):
     
     # Test Risk Analyst
     if risk_agent:
-        print("🔍 Quick Risk Analyst Test...")
+        print(" Quick Risk Analyst Test...")
         risk_scenarios = RiskAnalystScenarios()
         key_scenarios = ["structuring_classic", "money_laundering_complex"]
         
@@ -714,13 +714,13 @@ def run_quick_agent_test(risk_agent, compliance_agent=None):
             results[f"risk_{scenario}"] = result
             
             if result.get("overall_pass", False):
-                print(f"   ✅ {scenario}: {result['actual_classification']}")
+                print(f"    {scenario}: {result['actual_classification']}")
             else:
-                print(f"   ❌ {scenario}: Failed")
+                print(f"    {scenario}: Failed")
     
     # Test Compliance Officer
     if compliance_agent:
-        print("📝 Quick Compliance Officer Test...")
+        print(" Quick Compliance Officer Test...")
         compliance_scenarios = ComplianceOfficerScenarios()
         key_scenarios = ["structuring_narrative", "money_laundering_narrative"]
         
@@ -729,30 +729,30 @@ def run_quick_agent_test(risk_agent, compliance_agent=None):
             results[f"compliance_{scenario}"] = result
             
             if result.get("overall_pass", False):
-                print(f"   ✅ {scenario}: {result['word_count']} words")
+                print(f"    {scenario}: {result['word_count']} words")
             else:
-                print(f"   ❌ {scenario}: Failed")
+                print(f"    {scenario}: Failed")
     
     return results
 
 # Example usage when imported
 if __name__ == "__main__":
-    print("🧪 SAR Agent Test Scenarios")
+    print(" SAR Agent Test Scenarios")
     print("=" * 30)
     
     # Show available scenarios
     risk_scenarios = RiskAnalystScenarios()
     compliance_scenarios = ComplianceOfficerScenarios()
     
-    print(f"📊 Risk Analyst Scenarios: {len(risk_scenarios.scenarios)}")
+    print(f" Risk Analyst Scenarios: {len(risk_scenarios.scenarios)}")
     for name, scenario in risk_scenarios.scenarios.items():
-        print(f"   • {scenario['name']}: {scenario['description']}")
+        print(f"   - {scenario['name']}: {scenario['description']}")
     
-    print(f"\n📝 Compliance Officer Scenarios: {len(compliance_scenarios.scenarios)}")
+    print(f"\n Compliance Officer Scenarios: {len(compliance_scenarios.scenarios)}")
     for name, scenario in compliance_scenarios.scenarios.items():
-        print(f"   • {scenario['name']}: {scenario['description']}")
+        print(f"   - {scenario['name']}: {scenario['description']}")
     
-    print("\n💡 Usage:")
+    print("\n Usage:")
     print("   from test_scenarios import get_risk_analyst_scenarios, get_compliance_officer_scenarios")
     print("   risk_tests = get_risk_analyst_scenarios()")
     print("   results = risk_tests.run_all_scenarios(your_risk_agent)")

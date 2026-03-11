@@ -29,6 +29,7 @@ class RiskAnalystAgent:
 You are a Financial Crime Risk Analyst preparing a Chain-of-Thought assessment for suspicious activity review.
 Use step-by-step reasoning and ensure the reasoning field uses numbered steps in one concise line:
 Example: "1) Context review ... 2) Pattern signals ... 3) Typology mapping ... 4) Severity+confidence ... 5) Classification ..."
+Include all five numbered steps (1-5) in order.
 1. Review the customer profile and account context.
 2. Identify suspicious transaction patterns and temporal signals.
 3. Map the behavior to Financial Crime typologies and regulatory concerns.
@@ -94,18 +95,23 @@ Keep reasoning concise, professional, and suitable for audit review.
                 )
                 return result
             except Exception as retry_exc:
+                execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
                 # Final fallback: safe default output to keep workflow moving.
                 fallback = self._build_safe_default_output(
                     error_reason=str(retry_exc),
                 )
-                execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
+                reason = (
+                    f"JSON parsing failed: {retry_exc}"
+                    if isinstance(retry_exc, (json.JSONDecodeError, ValueError))
+                    else fallback.reasoning
+                )
                 self.logger.log_agent_action(
                     agent_type="RiskAnalyst",
                     action="analyze_case",
                     case_id=case_id,
                     input_data={"case_id": case_id, "retry": True},
                     output_data=fallback.model_dump(),
-                    reasoning=fallback.reasoning,
+                    reasoning=reason,
                     execution_time_ms=execution_time_ms,
                     success=False,
                     error_message=str(retry_exc),
@@ -185,8 +191,12 @@ Keep reasoning concise, professional, and suitable for audit review.
             trimmed = " ".join(reasoning.strip().split())
         else:
             trimmed = ""
-        has_numbered_steps = bool(re.search(r"\b1[).].*\b2[).]", trimmed))
-        if has_numbered_steps:
+        has_all_steps = True
+        for step in range(1, 6):
+            if not re.search(rf"\b{step}[).]", trimmed):
+                has_all_steps = False
+                break
+        if has_all_steps:
             return self._truncate_reasoning(trimmed)
 
         classification_label = classification or "Unknown"

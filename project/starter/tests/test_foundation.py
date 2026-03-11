@@ -49,8 +49,8 @@ except ImportError:
     FOUNDATION_IMPLEMENTED = False
 
 if not FOUNDATION_IMPLEMENTED:
-    print("⚠️  Foundation components not yet implemented - tests will be skipped")
-    print("💡 Implement the classes in src/foundation_sar.py to run these tests")
+    print("  Foundation components not yet implemented - tests will be skipped")
+    print(" Implement the classes in src/foundation_sar.py to run these tests")
 
 class TestCustomerData:
     """Test CustomerData Pydantic schema"""

@@ -40,7 +40,7 @@ def create_vocareum_openai_client():
         )
     
     if not api_key.startswith('voc-'):
-        print("⚠️ Warning: API key doesn't start with 'voc-'. "
+        print(" Warning: API key doesn't start with 'voc-'. "
               "Make sure you're using a Vocareum OpenAI API key from your Udacity workspace.")
     
     # Configure client for Vocareum routing
@@ -49,9 +49,9 @@ def create_vocareum_openai_client():
         api_key=api_key
     )
     
-    print("✅ OpenAI client initialized with Vocareum routing")
-    print(f"🔑 API key: {api_key[:8]}...{api_key[-4:]}")
-    print("📍 Base URL: https://openai.vocareum.com/v1")
+    print(" OpenAI client initialized with Vocareum routing")
+    print(f" API key: {api_key[:8]}...{api_key[-4:]}")
+    print(" Base URL: https://openai.vocareum.com/v1")
     
     return client
 

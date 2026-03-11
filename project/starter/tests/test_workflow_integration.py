@@ -60,7 +60,7 @@ def test_workflow_generates_sar_for_approved_case(tmp_path: Path):
     risk_agent.analyze_case.return_value = RiskAnalystOutput(
         classification="Structuring",
         confidence_score=0.9,
-        reasoning="Repeated near-threshold deposits indicate structuring.",
+        reasoning="1) Context review: case data reviewed. 2) Pattern signals: repeated near-threshold deposits. 3) Typology mapping: aligns with structuring. 4) Severity+confidence: High risk, 0.90 confidence. 5) Classification: Structuring.",
         key_indicators=["threshold avoidance"],
         risk_level="High",
     )
@@ -102,7 +102,7 @@ def test_workflow_rejected_case_does_not_generate_sar(tmp_path: Path):
     risk_agent.analyze_case.return_value = RiskAnalystOutput(
         classification="Other",
         confidence_score=0.4,
-        reasoning="Low-risk activity.",
+        reasoning="1) Context review: case data reviewed. 2) Pattern signals: low-risk activity observed. 3) Typology mapping: no clear typology match. 4) Severity+confidence: Low risk, 0.40 confidence. 5) Classification: Other.",
         key_indicators=["none"],
         risk_level="Low",
     )
@@ -127,4 +127,3 @@ def test_workflow_rejected_case_does_not_generate_sar(tmp_path: Path):
     compliance_agent.generate_compliance_narrative.assert_not_called()
     metrics_path = tmp_path / "outputs" / "audit_logs" / "workflow_metrics.json"
     assert metrics_path.exists()
-

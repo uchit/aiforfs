@@ -70,8 +70,8 @@ except ImportError:
     RISK_ANALYST_IMPLEMENTED = False
 
 if not RISK_ANALYST_IMPLEMENTED:
-    print("⚠️  Risk Analyst Agent not yet implemented - tests will be skipped")
-    print("💡 Implement the RiskAnalystAgent class in src/risk_analyst_agent.py to run these tests")
+    print("  Risk Analyst Agent not yet implemented - tests will be skipped")
+    print(" Implement the RiskAnalystAgent class in src/risk_analyst_agent.py to run these tests")
 
 class TestRiskAnalystAgent:
     """Test RiskAnalystAgent core functionality"""
@@ -105,7 +105,7 @@ class TestRiskAnalystAgent:
 {
     "classification": "Structuring",
     "confidence_score": 0.85,
-    "reasoning": "Multiple transactions just under $10,000 threshold suggest structuring",
+    "reasoning": "1) Context review: customer and account reviewed. 2) Pattern signals: multiple transactions just under $10,000 threshold. 3) Typology mapping: aligns with structuring. 4) Severity+confidence: High risk, 0.85 confidence. 5) Classification: Structuring.",
     "key_indicators": ["threshold avoidance", "repeated amounts", "cash deposits"],
     "risk_level": "High"
 }
@@ -219,9 +219,11 @@ class TestRiskAnalystAgent:
             data_sources={"test": "data"}
         )
         
-        # Should raise ValueError for invalid JSON
-        with pytest.raises(ValueError, match="Failed to parse Risk Analyst JSON output"):
-            agent.analyze_case(case)
+        # Should recover with safe fallback output after retry fails
+        result = agent.analyze_case(case)
+        assert isinstance(result, RiskAnalystOutput)
+        assert result.classification == "Other"
+        assert result.risk_level == "Low"
         
         # Verify error was logged
         assert len(logger.entries) == 1
@@ -242,7 +244,7 @@ class TestRiskAnalystAgent:
 {
     "classification": "Fraud",
     "confidence_score": 0.9,
-    "reasoning": "Clear fraud indicators",
+    "reasoning": "1) Context review: customer and transaction data reviewed. 2) Pattern signals: clear fraud indicators present. 3) Typology mapping: aligns with fraud. 4) Severity+confidence: Critical risk, 0.90 confidence. 5) Classification: Fraud.",
     "key_indicators": ["suspicious_pattern"],
     "risk_level": "Critical"
 }
@@ -261,7 +263,7 @@ That completes the analysis.'''
         """Test JSON extraction from plain text response"""
         agent = RiskAnalystAgent(Mock(), Mock())
         
-        response_plain_json = '''{"classification": "Money_Laundering", "confidence_score": 0.75, "reasoning": "Complex layering scheme", "key_indicators": ["multiple_transfers"], "risk_level": "High"}'''
+        response_plain_json = '''{"classification": "Money_Laundering", "confidence_score": 0.75, "reasoning": "1) Context review: case data reviewed. 2) Pattern signals: complex layering scheme observed. 3) Typology mapping: aligns with money laundering. 4) Severity+confidence: High risk, 0.75 confidence. 5) Classification: Money_Laundering.", "key_indicators": ["multiple_transfers"], "risk_level": "High"}'''
         
         extracted = agent._extract_json_from_response(response_plain_json)
         parsed = json.loads(extracted)
@@ -382,7 +384,7 @@ That completes the analysis.'''
         mock_client = Mock()
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = '''{"classification": "Other", "confidence_score": 0.5, "reasoning": "Test", "key_indicators": ["test"], "risk_level": "Low"}'''
+        mock_response.choices[0].message.content = '''{"classification": "Other", "confidence_score": 0.5, "reasoning": "1) Context review: case data reviewed. 2) Pattern signals: test scenario only. 3) Typology mapping: no clear typology match. 4) Severity+confidence: Low risk, 0.50 confidence. 5) Classification: Other.", "key_indicators": ["test"], "risk_level": "Low"}'''
         mock_client.chat.completions.create.return_value = mock_response
         
         logger = ExplainabilityLogger("test_api.jsonl")

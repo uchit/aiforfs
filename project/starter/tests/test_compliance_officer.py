@@ -3,7 +3,7 @@ Tests for Compliance Officer Agent
 
 The Compliance Officer Agent is responsible for generating regulatory-compliant SAR narratives
 using the ReACT (Reasoning-Action-Conclusion-Thought) prompting framework. The agent must:
-- Generate concise narratives (≤120 words)
+- Generate concise narratives (<=120 words)
 - Include proper regulatory citations
 - Apply BSA/AML compliance expertise
 - Format outputs for FinCEN SAR submission

@@ -71,6 +71,7 @@ class SARWorkflowManager:
         reviewer: str,
         reviewer_notes: str,
         approved: Optional[bool] = None,
+        interactive: bool = False,
     ) -> Dict[str, object]:
         """Run the full workflow and persist outputs for approved cases."""
         start_time = datetime.now()
@@ -81,6 +82,7 @@ class SARWorkflowManager:
             reviewer=reviewer,
             reviewer_notes=reviewer_notes,
             approved=approved,
+            interactive=interactive,
         )
 
         result: Dict[str, object] = {
@@ -93,16 +95,20 @@ class SARWorkflowManager:
             compliance_output = self.compliance_agent.generate_compliance_narrative(
                 case_data, risk_analysis
             )
-            sar_document = self._build_sar_document(
-                case_data=case_data,
-                risk_analysis=risk_analysis,
-                review_decision=review_decision,
-                compliance_output=compliance_output,
-            )
-            sar_path = self._write_sar_document(case_data.case_id, sar_document)
             result["compliance_output"] = compliance_output
-            result["sar_document_path"] = str(sar_path)
-            self.metrics.approved_cases += 1
+            if compliance_output.completeness_check:
+                sar_document = self._build_sar_document(
+                    case_data=case_data,
+                    risk_analysis=risk_analysis,
+                    review_decision=review_decision,
+                    compliance_output=compliance_output,
+                )
+                sar_path = self._write_sar_document(case_data.case_id, sar_document)
+                result["sar_document_path"] = str(sar_path)
+                self.metrics.approved_cases += 1
+            else:
+                # Do not finalize SAR if compliance checks fail.
+                self.metrics.rejected_cases += 1
         else:
             self.metrics.rejected_cases += 1
 
@@ -137,9 +143,17 @@ class SARWorkflowManager:
         reviewer: str,
         reviewer_notes: str,
         approved: Optional[bool] = None,
+        interactive: bool = False,
     ) -> HumanReviewDecision:
         """Implements the mandatory human-in-the-loop approval step."""
-        if approved is None:
+        if interactive and approved is None:
+            reviewer, reviewer_notes, approved = self._prompt_human_review(
+                case_data=case_data,
+                risk_analysis=risk_analysis,
+                reviewer=reviewer,
+                reviewer_notes=reviewer_notes,
+            )
+        elif approved is None:
             approved = risk_analysis.risk_level in {"High", "Critical"} or (
                 risk_analysis.confidence_score >= 0.75
             )
@@ -165,6 +179,45 @@ class SARWorkflowManager:
             success=True,
         )
         return decision
+
+    def _prompt_human_review(
+        self,
+        case_data: CaseData,
+        risk_analysis: RiskAnalystOutput,
+        reviewer: str,
+        reviewer_notes: str,
+    ) -> tuple[str, str, bool]:
+        """Interactive CLI review with a minimal, auditable UI."""
+        print("\n" + "=" * 64)
+        print("HUMAN REVIEW GATE")
+        print("=" * 64)
+        print(f"Case ID: {case_data.case_id}")
+        print(f"Customer: {case_data.customer.name} ({case_data.customer.customer_id})")
+        print(f"Risk Level: {risk_analysis.risk_level}")
+        print(f"Classification: {risk_analysis.classification}")
+        print(f"Confidence: {risk_analysis.confidence_score:.2f}")
+        print(f"Indicators: {', '.join(risk_analysis.key_indicators)}")
+        print(f"Reasoning: {risk_analysis.reasoning}")
+        print("-" * 64)
+
+        if not reviewer.strip():
+            reviewer = input("Reviewer name: ").strip()
+        while True:
+            decision = input("Approve SAR filing? (yes/no): ").strip().lower()
+            if decision in {"yes", "y"}:
+                approved = True
+                break
+            if decision in {"no", "n"}:
+                approved = False
+                break
+            print("Please enter 'yes' or 'no'.")
+
+        if not reviewer_notes.strip():
+            reviewer_notes = input("Reviewer notes (required): ").strip()
+            while not reviewer_notes:
+                reviewer_notes = input("Reviewer notes cannot be empty. Enter notes: ").strip()
+
+        return reviewer, reviewer_notes, approved
 
     def _build_sar_document(
         self,
@@ -203,4 +256,3 @@ class SARWorkflowManager:
             ),
             encoding="utf-8",
         )
-

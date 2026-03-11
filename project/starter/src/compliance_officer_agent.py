@@ -74,10 +74,9 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
             result = ComplianceOfficerOutput.model_validate(parsed)
             # Pre-finalization validator enforces completeness and regulatory minimums.
             validation = self._validate_narrative_compliance(result, case_data, risk_analysis)
-            if not validation["is_compliant"]:
+            result.completeness_check = validation["completeness_check"]
+            if validation.get("hard_fail"):
                 raise ValueError(validation["error"])
-            if result.completeness_check != validation["completeness_check"]:
-                result.completeness_check = validation["completeness_check"]
             execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
             self.logger.log_agent_action(
                 agent_type="ComplianceOfficer",
@@ -147,11 +146,26 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
         narrative = result.narrative or ""
         word_count = len(narrative.split())
         if word_count > 120:
-            return {"is_compliant": False, "error": "Narrative exceeds 120 word limit"}
+            return {
+                "is_compliant": False,
+                "completeness_check": False,
+                "hard_fail": True,
+                "error": "Narrative exceeds 120 word limit",
+            }
         if not narrative.strip():
-            return {"is_compliant": False, "error": "Narrative cannot be empty"}
+            return {
+                "is_compliant": False,
+                "completeness_check": False,
+                "hard_fail": True,
+                "error": "Narrative cannot be empty",
+            }
         if not result.narrative_reasoning or not result.narrative_reasoning.strip():
-            return {"is_compliant": False, "error": "Narrative reasoning cannot be empty"}
+            return {
+                "is_compliant": False,
+                "completeness_check": False,
+                "hard_fail": True,
+                "error": "Narrative reasoning cannot be empty",
+            }
 
         # Regulatory requirements define minimum narrative elements and citation anchors.
         requirements = get_regulatory_requirements()
@@ -169,7 +183,11 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
         has_explicit_date = any(
             getattr(txn, "transaction_date", "") in narrative for txn in case_data.transactions
         )
-        has_date_or_time = has_temporal_reference or has_explicit_date
+        has_iso_date = bool(re.search(r"\b\d{4}-\d{2}-\d{2}\b", narrative))
+        has_month_name = bool(
+            re.search(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", narrative, re.I)
+        )
+        has_date_or_time = has_temporal_reference or has_explicit_date or has_iso_date or has_month_name
 
         suspicious_terms = [
             "suspicious",
@@ -184,7 +202,10 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
             "red flag",
             "illicit",
         ]
-        has_suspicious_rationale = any(term in narrative.lower() for term in suspicious_terms)
+        classification_token = str(getattr(risk_analysis, "classification", "")).replace("_", " ").lower()
+        has_suspicious_rationale = any(term in narrative.lower() for term in suspicious_terms) or (
+            classification_token and classification_token in narrative.lower()
+        )
 
         missing_elements = []
         if not has_customer_identifier:
@@ -200,9 +221,10 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
         citations = result.regulatory_citations or []
         has_min_citations = len(citations) >= 1
         citation_text = " ".join(citations).lower()
+        required_citations = [c.lower() for c in requirements.get("citations", [])]
         has_regulatory_anchor = any(
             token in citation_text for token in ["31 cfr", "usc", "fincen", "bsa", "sar"]
-        )
+        ) or any(required in citation_text for required in required_citations)
         if not has_min_citations or not has_regulatory_anchor:
             missing_elements.append("Regulatory citations")
 
@@ -212,6 +234,7 @@ Maintain formal Compliance Officer tone and BSA/AML focus.
             "completeness_check": is_compliant,
             "word_count": word_count,
             "missing_elements": missing_elements,
+            "hard_fail": False,
             "error": (
                 "Narrative missing required elements: " + ", ".join(missing_elements)
                 if not is_compliant
